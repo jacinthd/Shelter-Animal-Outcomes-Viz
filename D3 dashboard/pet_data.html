@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>D3: Pet dataset</title>
+		<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="CatDogChart.js"></script>
+        <script src="ProcessPetData.js"></script>
+		<style type="text/css">
+			h6 {
+                margin-bottom: 0px;
+            }
+
+            rect:hover {
+				fill: lime;
+			}
+		</style>
+	</head>
+	<body>
+		<div id='container-pie'></div>
+		<div id='container-subtype'></div>
+        <div id='container-age'></div>
+        <div id='container-hour'></div>
+
+		<script type="text/javascript">
+
+			function make_pie_chart(rad, data) {
+				// svg for initial pie chart
+            	let pie_svg = d3.select("#container-pie")
+            			.append("center")
+                        .append("svg")
+                        .attr("width", rad)
+                        .attr("height", rad);
+
+				let outerRadius = rad/2;
+                let innerRadius = 0;
+                let arc = d3.arc()
+                        .innerRadius(innerRadius)
+                        .outerRadius(outerRadius);
+            
+                let pie = d3.pie();
+
+                //Set up groups
+                let arcs = pie_svg.selectAll("g.arc")
+                          .data(pie(data.Counts))
+                          .enter()
+                          .append("g")
+                          .attr("class", "arc")
+                          .attr("transform", "translate(" + outerRadius + "," + outerRadius + ")");
+
+                //Draw arc paths
+                arcs.append("path")
+                    .attr("fill", function(d, i) {
+                        return Color(i);
+                    })
+                    .attr("d", arc);
+
+                
+                //Labels 
+                arcs.append("text")
+                    .attr("transform", function(d) {
+                        return "translate(" + arc.centroid(d) + ")";
+                    })
+                    .attr("text-anchor", "middle")
+                    .text(function(d,i) {
+                        return data.Labels[i];
+                    });
+
+                //Tooltip
+                arcs.append("title")
+      				.text( (d,i)=> data.Counts[i] )
+
+      			// insert header for the graph
+			    d3.select("#container-pie").select("center")
+			        .insert("h6", "svg")
+			        .text("Animal-Type Breakdown");
+			}
+
+			var Height = 250;
+
+			//Easy colors accessible via a 10-step ordinal scale
+            var Color = d3.scaleOrdinal(d3.schemeCategory10);
+            
+            var ChartSubtype = new CatDogChart({
+                div_element: '#container-subtype',
+                header: 'Outcome-Subtype breakdown for selected Outcome-Type',
+                height: Height,
+                color: Color,
+                yAxisLabel: "Outcome-Subtype"
+            });
+
+            var ChartAge = new CatDogChart({
+                div_element: '#container-age',
+                header: 'Age breakdown for selected Outcome-Type',
+                height: Height*4/3,
+                color: Color,
+                yAxisLabel: "Age in Years"
+            });
+
+            var ChartHour = new CatDogChart({
+                div_element: '#container-hour',
+                header: 'Time of day breakdown for selected Outcome-Type',
+                height: Height*4/3,
+                color: Color,
+                yAxisLabel: "Hour of the Day"
+            });
+
+            //load the dataset
+            d3.csv('../train.csv', function(dataset) {
+                var petData = new ProcessPetData(dataset);
+                outcomeType = petData.getOutcomeType();
+
+                make_pie_chart(Height*3/4, petData.getAnimalTypeData());
+                
+                // Handler for dropdown value change
+                var dropdownChangeSubtype = function() {
+                    var newOutcomeType = d3.select(this).property('value');
+
+                    processedData = petData.filterOutcomeType(newOutcomeType)
+                    ChartSubtype.updateChart(processedData.Subtype);
+                };
+
+                var dropdownChangeAge = function() {
+                    var newOutcomeType = d3.select(this).property('value');
+
+                    processedData = petData.filterOutcomeType(newOutcomeType)
+                    ChartAge.updateChart(processedData.Age);
+                };
+
+                var dropdownChangeHour = function() {
+                    var newOutcomeType = d3.select(this).property('value');
+
+                    processedData = petData.filterOutcomeType(newOutcomeType)
+                    ChartHour.updateChart(processedData.Hour);
+                };
+
+
+                // encode the functionalilty of the dropdown menu
+                var dropdown_subtype = d3.select("body")
+                    .insert("select", "#container-subtype")
+                    .on("change", dropdownChangeSubtype);
+
+                var dropdown_age = d3.select("body")
+                    .insert("select", "#container-age")
+                    .on("change", dropdownChangeAge);
+
+                var dropdown_hour = d3.select("body")
+                    .insert("select", "#container-hour")
+                    .on("change", dropdownChangeHour);
+
+                // fill the options in dropdown menu
+                dropdown_subtype.selectAll("option")
+                    .style("font", "26px arial")
+                    .data(outcomeType)
+                    .enter()
+                    .append("option")
+                    .property("selected", function(d){ return d == "Euthanasia"; }) 
+                    .attr("value", d => d)
+                    .text( d => d);  
+
+                dropdown_age.selectAll("option")
+                    .data(outcomeType)
+                    .enter()
+                    .append("option")
+                    .property("selected", function(d){ return d == "Euthanasia"; }) 
+                    .attr("value", d => d)
+                    .text( d => d);  
+
+                dropdown_hour.selectAll("option")
+                    .data(outcomeType)
+                    .enter()
+                    .append("option")
+                    .property("selected", function(d){ return d == "Euthanasia"; }) 
+                    .attr("value", d => d)
+                    .text( d => d);    
+
+                //dropdownChange();
+                processedData = petData.filterOutcomeType("Euthanasia")
+
+                ChartSubtype.updateChart(processedData.Subtype);
+                ChartAge.updateChart(processedData.Age);
+                ChartHour.updateChart(processedData.Hour);
+            });
+		
+        </script>
+	</body>
+</html>
